@@ -1,0 +1,235 @@
+---
+# https://golangci-lint.run/docs/configuration/file/
+version: '2'
+
+run:
+  tests: true # default
+  allow-parallel-runners: true
+  allow-serial-runners: true
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+linters:
+  enable:
+    # By Default
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+
+    # Extra
+    - asasalint
+    - asciicheck
+    - bidichk
+    - bodyclose
+    - containedctx
+    - contextcheck
+    - copyloopvar
+    - dogsled
+    - dupword
+    - durationcheck
+    - errchkjson
+    # - errname # Checked by Revive
+    - errorlint
+    - exhaustive # Should be used?
+    - forbidigo
+    - ginkgolinter
+    - gocheckcompilerdirectives
+    - gocritic
+    - gocyclo # Checked by Revive
+    - godot
+    - gosec
+    - gosmopolitan
+    - grouper
+    - inamedparam
+    - intrange
+    - lll
+    - loggercheck
+    - makezero
+    - mirror
+    - nakedret
+    - nestif
+    - nilerr
+    - noctx
+    - nolintlint
+    - nosprintfhostport
+    - perfsprint
+    - predeclared
+    - protogetter
+    - reassign
+    - revive
+    - rowserrcheck
+    # - sloglint # When slog is used
+    - sqlclosecheck
+    # - tagalign # Is nice to have align structure tags, but that produce too long lines, and lll then complains
+    - testifylint
+    - testpackage
+    - unconvert
+    - usestdlibvars
+    - wastedassign
+    - whitespace
+
+  settings:
+    lll:
+      line-length: 120
+
+    staticcheck:
+      checks:
+        - all
+
+    govet:
+      enable-all: true
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+        - opinionated
+      disabled-checks:
+        - whyNoLint # Is checked by nolintlint with excluding lll much easier
+        - deferInLoop # Checked by revive already
+        - dupBranchBody # Checked by revive already
+
+    ginkgolinter:
+      forbid-focus-container: true
+
+    nakedret:
+      max-func-lines: 8 # Counting also declaration, not just body
+
+    nolintlint:
+      allow-no-explanation: [lll]
+      require-explanation: true
+      require-specific: true
+
+    exhaustive:
+      check:
+        - switch
+        - map
+      default-signifies-exhaustive: true
+
+    revive:
+      # When listed some additional rules, it overrides defaults as well.
+      # Put manually all default ones from https://github.com/mgechev/revive/blob/master/defaults.toml
+      rules:
+        # Default ones sorted as are in defaults.toml
+        - name: blank-imports
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: dot-imports
+        - name: empty-block
+        - name: error-naming
+        - name: error-return
+        - name: error-strings
+        - name: errorf
+        - name: exported
+          arguments: [checkPublicInterface]
+        - name: increment-decrement
+        - name: indent-error-flow
+        - name: package-comments
+        - name: range
+        - name: receiver-naming
+        - name: redefines-builtin-id
+        - name: superfluous-else
+        - name: time-naming
+        - name: unexported-return
+        - name: unreachable-code
+        - name: unused-parameter
+        - name: var-declaration
+        - name: var-naming
+          arguments:
+            - []
+            - []
+            - - skip-package-name-checks: true # Hard to add nolint directive to ignore package name, so skip all
+
+        # Extra ones
+        - name: atomic
+        # - name: bare-return # nakedret support line counter - use that instead
+        - name: bool-literal-in-expr
+        - name: comment-spacings
+        - name: confusing-naming
+        - name: confusing-results
+        - name: constant-logical-expr
+        - name: cyclomatic
+          arguments: [30]
+        - name: datarace
+        - name: deep-exit
+        - name: defer
+        - name: duplicated-imports
+        - name: early-return
+        - name: empty-lines
+        - name: get-return
+        - name: identical-branches
+        - name: if-return
+        - name: import-alias-naming
+          arguments:
+            - ^([a-z][a-z0-9]{0,}|\.)$
+        - name: import-shadowing
+        - name: imports-blocklist
+          arguments:
+            - github.com/gogo/status
+            - github.com/gogo/protobuf
+            - github.com/gogo/googleapis
+        - name: modifies-parameter
+        - name: modifies-value-receiver
+        - name: nested-structs
+        - name: optimize-operands-order
+        - name: range-val-address
+        - name: range-val-in-closure
+        - name: redundant-import-alias
+        - name: string-of-int
+        # - name: struct-tag  issue: https://github.com/mgechev/revive/issues/1367
+        - name: time-equal
+        # - name: unchecked-type-assertion # Not sure about this one...
+        - name: unconditional-recursion
+        - name: unexported-naming
+        - name: unhandled-error # It is OK not to check errors from some specific cases
+          arguments:
+            - (?i)fmt\.(F|S)?Print(ln|f)?
+            - (bytes\.Buffer|strings\.Builder)\.Write(Byte|String|Rune)?
+        - name: unnecessary-stmt
+        - name: unused-receiver
+        - name: use-any
+        - name: useless-break
+        - name: waitgroup-by-value
+
+    usestdlibvars:
+      sql-isolation-level: true
+
+  exclusions:
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+    generated: strict
+    rules:
+       # We want to allow import gomega and ginkgo (+ all sub-packages) in tests files only
+      - linters:
+          - revive
+        text: '^dot-imports:'
+        source: . "github.com/onsi/(gomega|ginkgo)(/.*)?"
+        path: .*_test.go
+
+formatters:
+  enable:
+    - gci
+    - gofmt
+  settings:
+    gci:
+      # Keep in sync with GNUMakefile
+      sections:
+        - standard
+        - default
+        - prefix(github.com/arxeiss/deadmono)
+        - blank
+        - dot
+  exclusions:
+    generated: strict
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

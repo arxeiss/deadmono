@@ -12,20 +12,24 @@ import (
 )
 
 type (
+	// Runner specify all configuration for running deadcode analysis across monorepo.
 	Runner struct {
 		writer    io.Writer
 		errWriter io.Writer
-		paths     []string
 
 		lastModule string
+
+		// TagsFlag is a comma-separated list of extra build tags.
+		TagsFlag string
+
+		paths []string
+
 		// DebugFlag turns on more verbose output.
 		DebugFlag bool
 		// GeneratedFlag turns on reporting of dead functions in generated Go files.
 		GeneratedFlag bool
 		// TestFlag turns on reporting of dead functions in test files.
 		TestFlag bool
-		// TagsFlag is a comma-separated list of extra build tags.
-		TagsFlag string
 		// JSONFlag turns on JSONFlag output.
 		JSONFlag bool
 	}
@@ -76,7 +80,7 @@ func (r *Runner) Run(ctx context.Context) error {
 
 	deadCode := r.intersectDeadcode(eps)
 	if r.JSONFlag {
-		return fmt.Errorf("JSON output is not implemented yet")
+		return r.printJSON(ctx, deadCode)
 	}
 
 	allPaths := make([]string, 0)
@@ -101,7 +105,8 @@ func (r *Runner) scanEntrypoint(ctx context.Context, path string) (*entrypointIn
 	}
 	r.writeDebug("Start scanning entrypoint: %s", absPath)
 
-	if err := r.verifyModule(ctx, absPath); err != nil {
+	err = r.verifyModule(ctx, absPath)
+	if err != nil {
 		return nil, err
 	}
 
@@ -170,7 +175,7 @@ func (r *Runner) listEntrypointDeadcode(ctx context.Context, absPath string) (ma
 	absDirPath := filepath.Dir(absPath)
 	out, err := getCommandOutput(ctx, absDirPath, "go", "list", "-f", `{{.Root}}`)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to list root path: %w", err)
+		return nil, fmt.Errorf("failed to list root path: %w", err)
 	}
 	rootPath := filepath.Clean(strings.TrimSpace(string(out))) + string(filepath.Separator)
 	r.writeDebug("Detected root path: %s", rootPath)
@@ -189,13 +194,14 @@ func (r *Runner) listEntrypointDeadcode(ctx context.Context, absPath string) (ma
 	}
 	out, err = getCommandOutput(ctx, absDirPath, "deadcode", append(args, "./...")...)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to list deadcode: %w", err)
+		return nil, fmt.Errorf("failed to list deadcode: %w", err)
 	}
 	r.writeDebug("Scanning %s for deadcode finished in %s", absDirPath, time.Since(timeStart))
 
 	deadCode := map[string]map[string]struct{}{}
 	for _, line := range strings.Split(string(out), "\n") {
-		line, found := strings.CutPrefix(line, rootPath)
+		var found bool
+		line, found = strings.CutPrefix(line, rootPath)
 		if !found {
 			line, _ = strings.CutPrefix(filepath.Join(absDirPath, line), rootPath)
 		}
@@ -213,7 +219,7 @@ func (r *Runner) listEntrypointDeadcode(ctx context.Context, absPath string) (ma
 	return deadCode, nil
 }
 
-func (r *Runner) intersectDeadcode(eps []*entrypointInfo) map[string]map[string]struct{} {
+func (*Runner) intersectDeadcode(eps []*entrypointInfo) map[string]map[string]struct{} {
 	result := eps[0]
 	for pkg := range result.deps {
 		if _, found := result.deadCode[pkg]; !found {
@@ -260,4 +266,8 @@ func (r *Runner) intersectDeadcode(eps []*entrypointInfo) map[string]map[string]
 		}
 	}
 	return result.deadCode
+}
+
+func (r *Runner) printJSON(_ context.Context, _ map[string]map[string]struct{}) error {
+	return fmt.Errorf("JSON output is not implemented yet")
 }

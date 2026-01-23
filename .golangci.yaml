@@ -56,7 +56,7 @@ linters:
     - noctx
     - nolintlint
     - nosprintfhostport
-    - perfsprint
+    # - perfsprint
     - predeclared
     - protogetter
     - reassign
@@ -201,6 +201,8 @@ linters:
       sql-isolation-level: true
 
   exclusions:
+    presets:
+      - std-error-handling
     paths:
       - third_party$
       - builtin$

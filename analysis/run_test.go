@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"github.com/arxeiss/deadmono/analysis"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )

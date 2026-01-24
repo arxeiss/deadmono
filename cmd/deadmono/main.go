@@ -1,4 +1,3 @@
-// Package main provides CLI for running deadcode analysis across monorepo.
 package main
 
 import (
@@ -7,12 +6,18 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/arxeiss/deadmono/analysis"
+
+	_ "embed"
 )
 
 var (
+	//go:embed doc.go
+	doc string
+
 	debugFlag = flag.Bool("debug", false, "enable debug output")
 	helpFlag  = flag.Bool("help", false, "show help")
 
@@ -54,7 +59,10 @@ func main() {
 
 func usage() {
 	// Extract the content of the /* ... */ comment in doc.go.
-	_, _ = os.Stderr.WriteString(`DOC HERE
+	_, after, _ := strings.Cut(doc, "/*\n")
+	doc, _, _ := strings.Cut(after, "*/")
+	// Extract the content of the /* ... */ comment in doc.go.
+	_, _ = os.Stderr.WriteString(doc + `
 Flags:
 
 `)

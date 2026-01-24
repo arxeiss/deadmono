@@ -268,6 +268,6 @@ func (*Runner) intersectDeadcode(eps []*entrypointInfo) map[string]map[string]st
 	return result.deadCode
 }
 
-func (r *Runner) printJSON(_ context.Context, _ map[string]map[string]struct{}) error {
+func (*Runner) printJSON(_ context.Context, _ map[string]map[string]struct{}) error {
 	return fmt.Errorf("JSON output is not implemented yet")
 }

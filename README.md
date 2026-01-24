@@ -1,5 +1,9 @@
 # deadmono
 
+[![Lint and test](https://github.com/arxeiss/deadmono/actions/workflows/lint-test.yaml/badge.svg)](https://github.com/arxeiss/deadmono/actions/workflows/lint-test.yaml)
+[![Go Reference](https://pkg.go.dev/badge/github.com/arxeiss/deadmono.svg)](https://pkg.go.dev/github.com/arxeiss/deadmono)
+[![codecov](https://codecov.io/gh/arxeiss/deadmono/graph/badge.svg?token=UDEWAC3KC2)](https://codecov.io/gh/arxeiss/deadmono)
+
 **Dead code detection for Go monorepos**
 
 `deadmono` reports unreachable functions across multiple entrypoints in Go monorepos. It extends the functionality of the [`deadcode`](https://pkg.go.dev/golang.org/x/tools/cmd/deadcode) tool to work with monorepos containing multiple main packages.

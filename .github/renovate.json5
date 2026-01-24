@@ -1,0 +1,45 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    // org shared config - https://github.com/indykite/ops-common/blob/master/.github/renovate.json
+    ":enableRenovate",
+    "config:best-practices",
+    "schedule:weekly",
+    ":dependencyDashboard",
+    ":gomod",
+    ":enableVulnerabilityAlerts",
+    ":ignoreModulesAndTests",
+    ":ignoreUnstable",
+    "replacements:all",
+    "workarounds:all"
+  ],
+  "enabledManagers": [
+    "github-actions",
+    "gomod",
+    "custom.regex"
+  ],
+  "postUpdateOptions": [
+    "gomodTidy",
+    "gomodUpdateImportPaths",
+    "gomodMassage"
+  ],
+  "groupName": "everything",
+  "ignoreDeps": [],
+  "draftPR": true,
+  "ignorePaths": [
+    "**/testdata/**"
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": [
+        "/\\.ya?ml/"
+      ],
+      "matchStrings": [
+        "(?<currentValue>\\S+) # renovate: datasource=(?<datasource>[a-z-]+),depName=(?<depName>[a-z0-9-_/]+)"
+      ],
+      "versioningTemplate": "semver",
+      "registryUrlTemplate": "https://github.com"
+    }
+  ]
+}

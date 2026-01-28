@@ -24,6 +24,8 @@ var (
 	testFlag = flag.Bool("test", false, "include implicit test packages and executables (deadcode flag)")
 	tagsFlag = flag.String("tags", "",
 		"comma-separated list of extra build tags (see: go help buildconstraint) (deadcode flag)")
+	filterFlag = flag.String("filter", "<module>",
+		"report only packages matching this regular expression (default: module of first package)")
 
 	generatedFlag = flag.Bool("generated", false, "include dead functions in generated Go files (deadcode flag)")
 	jsonFlag      = flag.Bool("json", false, "output JSON records (deadcode flag)")
@@ -31,7 +33,6 @@ var (
 
 func main() {
 	flag.Parse()
-
 	if len(flag.Args()) == 0 || *helpFlag {
 		usage()
 		os.Exit(2)
@@ -45,6 +46,7 @@ func main() {
 	runner.TestFlag = *testFlag
 	runner.TagsFlag = *tagsFlag
 	runner.JSONFlag = *jsonFlag
+	runner.FilterFlag = *filterFlag
 
 	err := runner.Run(ctx)
 	cancel()

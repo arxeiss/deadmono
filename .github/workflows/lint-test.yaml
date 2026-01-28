@@ -1,6 +1,9 @@
 ---
 name: Lint and test
-on: [push]
+on:
+    push:
+        branches: [master]
+    pull_request:
 
 concurrency:
     group: pr-${{ github.ref }}

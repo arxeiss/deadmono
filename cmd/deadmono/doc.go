@@ -16,7 +16,7 @@ truly unused code by finding the package based intersection of dead code across 
 # How it works
 
 For each provided entrypoint (main.go file):
- 1. Lists all dependencies within the same Go module
+ 1. Lists all dependencies
  2. Runs deadcode analysis to find unreachable functions
  3. Intersects package based results across all entrypoints
  4. Reports only functions that are dead in ALL entrypoints
@@ -37,9 +37,21 @@ The -generated flag includes dead functions in generated Go files (passed to dea
 
 The -tags flag allows specifying build tags (passed to deadcode).
 
-The -json flag outputs results in JSON format (not yet implemented).
+The -filter flag allows filtering packages by regular expression (passed to deadcode).
+By default, it filters to the module of the first entrypoint ("<module>").
+When using a custom filter, entrypoints from different Go modules are supported.
+
+The -json flag outputs results in JSON format (same format as deadcode).
 
 The -debug flag enables verbose debug output.
+
+# Output
+
+The output format matches deadcode, with one difference: file path handling.
+Since deadmono analyzes multiple entrypoints, it uses a consistent path strategy:
+
+  - Single module: Paths relative to go.mod when all entrypoints are in the same module
+  - Multiple modules: Absolute paths when entrypoints span different modules
 
 # Requirements
 
@@ -47,7 +59,13 @@ The deadcode tool must be installed:
 
 	$ go install golang.org/x/tools/cmd/deadcode@latest
 
-All provided entrypoints must belong to the same Go module.
+# Multiple Go Modules
+
+By default, all provided entrypoints must belong to the same Go module.
+To analyze entrypoints from different modules, use the -filter flag with a
+custom regular expression to specify which packages to analyze:
+
+	$ deadmono -filter "github.com/myorg/.*" module1/main.go module2/main.go
 
 # Limitations
 

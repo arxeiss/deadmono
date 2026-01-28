@@ -39,14 +39,33 @@ This will report functions that are unused by all three services.
 - `-test` - Analyze test executables too (passed to deadcode)
 - `-generated` - Include dead functions in generated Go files (passed to deadcode)
 - `-tags string` - Comma-separated list of build tags (passed to deadcode)
-- `-json` - Output results in JSON format _(not yet implemented)_
+- `-filter string` - Filter packages by regular expression (passed to deadcode). Default: `<module>` (filters to the module of the first entrypoint)
+- `-json` - Output results in JSON format (same format as deadcode)
 - `-debug` - Enable verbose debug output
 - `-help` - Show help message
+
+### Output
+
+The output format matches `deadcode`, with one difference: file path handling. Since `deadmono` analyzes multiple entrypoints, it uses a consistent path strategy:
+
+- **Single module** - Paths relative to `go.mod` when all entrypoints are in the same module
+- **Multiple modules** - Absolute paths when entrypoints span different modules
+
 
 ## Requirements
 
 - The [`deadcode`](https://pkg.go.dev/golang.org/x/tools/cmd/deadcode) tool must be installed
-- All provided entrypoints must belong to the same Go module
+
+## Multiple Go Modules
+
+By default, all provided entrypoints must belong to the same Go module. To analyze entrypoints from different modules, use the `-filter` flag with a custom regular expression:
+
+```bash
+# Analyze services from different modules
+deadmono -filter "github.com/myorg/.*" module1/services/api/main.go module2/services/worker/main.go
+```
+
+When using a custom `-filter` flag, deadmono supports analyzing entrypoints across multiple Go modules.
 
 
 ## The Problem
@@ -135,4 +154,3 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## Acknowledgments
 
 This tool builds upon the excellent [`deadcode`](https://pkg.go.dev/golang.org/x/tools/cmd/deadcode) tool from the Go team.
-

@@ -1,3 +1,5 @@
+<p align="center"><img src="./deadmono-small.png" width="400"></p>
+
 # deadmono
 
 [![Lint and test](https://github.com/arxeiss/deadmono/actions/workflows/lint-test.yaml/badge.svg)](https://github.com/arxeiss/deadmono/actions/workflows/lint-test.yaml)
@@ -7,6 +9,10 @@
 **Dead code detection for Go monorepos**
 
 `deadmono` reports unreachable functions across multiple entrypoints in Go monorepos. It extends the functionality of the [`deadcode`](https://pkg.go.dev/golang.org/x/tools/cmd/deadcode) tool to work with monorepos containing multiple main packages.
+
+Usage is not strictly limited to monorepos. It can be used in any Go project with multiple entrypoints.
+For example, you can use it to detect dead code in internal SDK shared across many projects. For that usecase,
+you must use the `-filter` flag.
 
 ## Installation
 

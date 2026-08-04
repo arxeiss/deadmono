@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"os/exec"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/arxeiss/deadmono/analysis"
@@ -112,10 +114,18 @@ var _ = Describe("Runner", func() {
 		absPath, err := filepath.Abs(".")
 		Expect(err).To(Succeed())
 		dir := filepath.Dir(absPath) + "/"
+
+		// Count dependencies ourselves. It can vary over time when Go is updated, so we don't want to hardcode it.
+		cmd := exec.CommandContext(ctx, "go", "list", "-f", `{{range .Deps}}{{.}}{{"\n"}}{{end}}`)
+		cmd.Dir = filepath.Dir("testdata/allinone/services/authn/main.go")
+		out, err := cmd.CombinedOutput()
+		Expect(err).To(Succeed())
+		depCount := strings.Count(string(out), "\n")
+
 		Expect(stdErr.String()).To(HavePrefix(
 			"Start scanning entrypoint: " + dir + "analysis/testdata/allinone/services/authn/main.go\n" +
 				"Detected module name: github.com/arxeiss/deadmono/\n" +
-				"Detected 30 dependencies\n" +
+				"Detected " + strconv.Itoa(depCount) + " dependencies\n" +
 				"Detected root path: " + dir + "\n" +
 				"Starting to scan " + dir + "analysis/testdata/allinone/services/authn for deadcode, might take a while\n" +
 				"Scanning " + dir + "analysis/testdata/allinone/services/authn for deadcode finished in ",

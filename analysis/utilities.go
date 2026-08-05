@@ -7,7 +7,7 @@ import (
 )
 
 func getCommandOutput(ctx context.Context, dir, name string, args ...string) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, name, args...)
+	cmd := exec.CommandContext(ctx, name, args...) //nolint:gosec // We are not executing any user input.
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	if err != nil {

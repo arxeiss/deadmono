@@ -23,9 +23,9 @@ jobs:
                   go-version-file: go.mod
 
             - name: Run GolangCI-Lint Scanner
-              uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0 - https://github.com/golangci/golangci-lint-action/releases
+              uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0 - https://github.com/golangci/golangci-lint-action/releases
               with:
-                  version: v2.8.0 # renovate: datasource=github-releases,depName=golangci/golangci-lint
+                  version: v2.12.2 # renovate: datasource=github-releases,depName=golangci/golangci-lint
 
     test:
         name: Test and coverage

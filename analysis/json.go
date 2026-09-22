@@ -2,9 +2,10 @@ package analysis
 
 // Package represents a Go package with its dead functions.
 type Package struct {
-	Name  string      // declared name
-	Path  string      // full import path
-	Funcs []*Function // list of dead functions within it
+	Name         string      // declared name
+	Path         string      // full import path
+	Funcs        []*Function // list of dead functions within it
+	WholePackage bool        `json:"WholePackage,omitempty"` // whole package is dead
 }
 
 // Function represents a dead function within a Go package with all details.

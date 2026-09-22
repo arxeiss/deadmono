@@ -1,6 +1,6 @@
 package main
 
-import "github.com/arxeiss/deadmono/analysis/testdata/allinone/pkg/http"
+import "github.com/arxeiss/deadmono/sample/allinone/pkg/http"
 
 func main() {
 	http.New()

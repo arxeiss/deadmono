@@ -3,8 +3,8 @@
 package internal
 
 import (
-	"github.com/arxeiss/deadmono/analysis/testdata/allinone/pkg/http"
-	"github.com/arxeiss/deadmono/analysis/testdata/allinone/pkg/logging"
+	"github.com/arxeiss/deadmono/sample/allinone/pkg/http"
+	"github.com/arxeiss/deadmono/sample/allinone/pkg/logging"
 )
 
 func Run() {

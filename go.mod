@@ -1,6 +1,6 @@
 module github.com/arxeiss/deadmono
 
-go 1.26.5
+go 1.27.0
 
 require (
 	github.com/onsi/ginkgo/v2 v2.33.0

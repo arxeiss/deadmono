@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"os/exec"
 	"path/filepath"
 	"slices"
@@ -24,6 +25,7 @@ type (
 		FilterFlag string
 
 		commonModule    string
+		commonGoMod     string
 		paths           []string
 		hasCommonModule bool
 
@@ -35,6 +37,8 @@ type (
 		TestFlag bool
 		// JSONFlag turns on JSONFlag output.
 		JSONFlag bool
+		// NoDeadPkgFlag turns off reporting of dead packages. Useful to keep output consistent with deadcode.
+		NoDeadPkgFlag bool
 	}
 
 	entrypointInfo struct {
@@ -90,6 +94,12 @@ func (r *Runner) Run(ctx context.Context) error {
 		eps = append(eps, ep)
 	}
 
+	// Scan for dead packages, as they are otherwise excluded by [Runner.intersectDeadCode].
+	deadPackages, err := r.listDeadPackages(ctx, eps)
+	if err != nil {
+		return err
+	}
+
 	// Scan for deadcode.
 	for _, ep := range eps {
 		ep.deadCode, err = r.listEntrypointDeadCode(ctx, ep.absPath)
@@ -99,6 +109,7 @@ func (r *Runner) Run(ctx context.Context) error {
 	}
 
 	deadCode := r.intersectDeadCode(eps)
+	maps.Copy(deadCode, deadPackages)
 
 	if r.JSONFlag {
 		return r.printJSON(ctx, deadCode)
@@ -144,16 +155,19 @@ func (r *Runner) verifyBinaries(_ context.Context) error {
 
 func (r *Runner) verifyModule(ctx context.Context, absPath string) error {
 	// Verify module name
-	out, err := getCommandOutput(ctx, filepath.Dir(absPath), "go", "list", "-m")
+	out, err := getCommandOutput(ctx, filepath.Dir(absPath), "go", "list", "-m", "-f", `{{.Path}}{{"\n"}}{{.GoMod}}`)
 	if err != nil {
 		return fmt.Errorf("failed to list module name: %w", err)
 	}
 
-	m := strings.TrimSuffix(strings.TrimSpace(string(out)), "/") + "/"
+	m, goMod, _ := strings.Cut(string(out), "\n")
+	m = strings.TrimSuffix(strings.TrimSpace(m), "/") + "/"
+
 	switch {
 	case r.commonModule == "":
 		r.commonModule = m
 		r.hasCommonModule = true
+		r.commonGoMod = strings.TrimSpace(goMod)
 	case r.commonModule == m:
 		// Do nothing, as everything was set before
 	case r.FilterFlag == "<module>" || r.FilterFlag == "":
@@ -202,6 +216,49 @@ func (r *Runner) getDeadCodeArgs() []string {
 		args = append(args, "-filter", r.FilterFlag)
 	}
 	return append(args, "./...")
+}
+
+func (r *Runner) listDeadPackages(ctx context.Context, eps []*entrypointInfo) (map[string]deadPackageFuncs, error) {
+	// If we don't have common module, we cannot easily detect dead packages.
+	// We don't have 1 go mod where to list, plus filter is required in such case anyway.
+	if !r.hasCommonModule || r.NoDeadPkgFlag {
+		return nil, nil
+	}
+
+	absDirPath := filepath.Dir(r.commonGoMod)
+	out, err := getCommandOutput(ctx, absDirPath,
+		"go", "list", "-f", `{{.ImportPath}}{{"\t"}}{{.Name}}`, absDirPath+"/...")
+	if err != nil {
+		return nil, fmt.Errorf("failed to list packages: %w", err)
+	}
+
+	deadPackages := make(map[string]deadPackageFuncs)
+	for _, line := range strings.Split(string(out), "\n") {
+		if line == "" {
+			continue
+		}
+		path, name, _ := strings.Cut(line, "\t")
+		// Ignore main packages, as those are definitely not imported by others. But are not dead
+		if strings.TrimSpace(name) == "main" {
+			continue
+		}
+		deadPackages[strings.TrimSpace(path)] = deadPackageFuncs{
+			pkg: &Package{
+				Name:         name,
+				Path:         path,
+				WholePackage: true,
+			},
+		}
+	}
+
+	// Drop all packages that are imported by any of the entrypoints.
+	for _, ep := range eps {
+		for pkg := range ep.deps {
+			delete(deadPackages, pkg)
+		}
+	}
+
+	return deadPackages, nil
 }
 
 func (r *Runner) listEntrypointDeadCode(ctx context.Context, absPath string) (map[string]deadPackageFuncs, error) {
@@ -310,7 +367,7 @@ func (r *Runner) printJSON(_ context.Context, deadCode map[string]deadPackageFun
 	out := make([]*Package, 0, len(deadCode))
 
 	for _, dpf := range deadCode {
-		if len(dpf.funcs) == 0 {
+		if len(dpf.funcs) == 0 && (dpf.pkg == nil || !dpf.pkg.WholePackage) {
 			continue
 		}
 		dpf.pkg.Funcs = make([]*Function, 0, len(dpf.funcs))
@@ -339,6 +396,15 @@ func (r *Runner) printJSON(_ context.Context, deadCode map[string]deadPackageFun
 func (r *Runner) printText(_ context.Context, deadCode map[string]deadPackageFuncs) {
 	allPaths := make([]string, 0)
 	for _, dpf := range deadCode {
+		if dpf.pkg != nil && dpf.pkg.WholePackage {
+			pp := dpf.pkg.Path
+			if r.hasCommonModule {
+				pp, _ = strings.CutPrefix(pp, r.commonModule)
+			}
+			allPaths = append(allPaths, fmt.Sprintf("%s: unreachable package", pp))
+			continue
+		}
+
 		for _, fun := range dpf.funcs {
 			allPaths = append(allPaths, fmt.Sprintf(
 				"%s:%d:%d: unreachable func: %s",

@@ -52,7 +52,7 @@ var _ = Describe("Runner", func() {
 		})
 		err := r.Run(ctx)
 		Expect(err).To(MatchError("different modules are not supported without filter flag: " +
-			"github.com/arxeiss/deadmono/ != github.com/arxeiss/deadmono/testdata/"))
+			"github.com/arxeiss/deadmono/sample/allinone/ != github.com/arxeiss/deadmono/sample/cli/"))
 	})
 
 	It("fails on invalid filter flag", func() {
@@ -70,10 +70,11 @@ var _ = Describe("Runner", func() {
 		func(paths []string) {
 			ctx := context.Background()
 
-			expectedOutput := "analysis/testdata/allinone/pkg/cache/cache.go:12:6: unreachable func: Delete\n" +
-				"analysis/testdata/allinone/pkg/logging/logging.go:12:6: unreachable func: Warn\n" +
-				"analysis/testdata/allinone/pkg/logging/logging.go:6:6: unreachable func: Debug\n" +
-				"analysis/testdata/allinone/services/authn/internal/auth.go:18:6: unreachable func: RunFromTest\n"
+			expectedOutput := "pkg/cache/cache.go:12:6: unreachable func: Delete\n" +
+				"pkg/crypto: unreachable package\n" +
+				"pkg/logging/logging.go:12:6: unreachable func: Warn\n" +
+				"pkg/logging/logging.go:6:6: unreachable func: Debug\n" +
+				"services/authn/internal/auth.go:18:6: unreachable func: RunFromTest\n"
 
 			r := analysis.New(stdOut, stdErr, paths)
 			Expect(r.Run(ctx)).To(Succeed())
@@ -111,9 +112,9 @@ var _ = Describe("Runner", func() {
 		r.DebugFlag = true
 		Expect(r.Run(ctx)).To(Succeed())
 
-		absPath, err := filepath.Abs(".")
+		dir, err := filepath.Abs("testdata/allinone/")
 		Expect(err).To(Succeed())
-		dir := filepath.Dir(absPath) + "/"
+		dir += "/"
 
 		// Count dependencies ourselves. It can vary over time when Go is updated, so we don't want to hardcode it.
 		cmd := exec.CommandContext(ctx, "go", "list", "-f", `{{range .Deps}}{{.}}{{"\n"}}{{end}}`)
@@ -123,12 +124,12 @@ var _ = Describe("Runner", func() {
 		depCount := strings.Count(string(out), "\n")
 
 		Expect(stdErr.String()).To(HavePrefix(
-			"Start scanning entrypoint: " + dir + "analysis/testdata/allinone/services/authn/main.go\n" +
-				"Detected module name: github.com/arxeiss/deadmono/\n" +
+			"Start scanning entrypoint: " + dir + "services/authn/main.go\n" +
+				"Detected module name: github.com/arxeiss/deadmono/sample/allinone/\n" +
 				"Detected " + strconv.Itoa(depCount) + " dependencies\n" +
 				"Detected root path: " + dir + "\n" +
-				"Starting to scan " + dir + "analysis/testdata/allinone/services/authn for deadcode, might take a while\n" +
-				"Scanning " + dir + "analysis/testdata/allinone/services/authn for deadcode finished in ",
+				"Starting to scan " + dir + "services/authn for deadcode, might take a while\n" +
+				"Scanning " + dir + "services/authn for deadcode finished in ",
 		))
 	})
 
@@ -144,25 +145,39 @@ var _ = Describe("Runner", func() {
 		},
 		Entry("Generated", func(r *analysis.Runner) {
 			r.GeneratedFlag = true
-		}, "analysis/testdata/allinone/pkg/http/http.go:13:6: unreachable func: Post\n"+
-			"analysis/testdata/allinone/pkg/http/http.go:17:6: unreachable func: Put\n"+
-			"analysis/testdata/allinone/pkg/http/http.go:9:6: unreachable func: Get\n"+
-			"analysis/testdata/allinone/pkg/logging/logging.go:12:6: unreachable func: Warn\n"+
-			"analysis/testdata/allinone/pkg/logging/logging.go:6:6: unreachable func: Debug\n"+
-			"analysis/testdata/allinone/services/authn/internal/auth.go:18:6: unreachable func: RunFromTest\n"+
-			"analysis/testdata/allinone/services/authn/internal/generated.go:5:6: unreachable func: Generated\n",
+		}, "pkg/cache: unreachable package\n"+
+			"pkg/crypto: unreachable package\n"+
+			"pkg/http/http.go:13:6: unreachable func: Post\n"+
+			"pkg/http/http.go:17:6: unreachable func: Put\n"+
+			"pkg/http/http.go:9:6: unreachable func: Get\n"+
+			"pkg/logging/logging.go:12:6: unreachable func: Warn\n"+
+			"pkg/logging/logging.go:6:6: unreachable func: Debug\n"+
+			"services/authn/internal/auth.go:18:6: unreachable func: RunFromTest\n"+
+			"services/authn/internal/generated.go:5:6: unreachable func: Generated\n",
 		),
 		Entry("Tests", func(r *analysis.Runner) {
 			r.TestFlag = true
-		}, "analysis/testdata/allinone/pkg/http/http.go:17:6: unreachable func: Put\n"+
-			"analysis/testdata/allinone/pkg/http/http.go:9:6: unreachable func: Get\n"+
-			"analysis/testdata/allinone/pkg/logging/logging.go:12:6: unreachable func: Warn\n",
+		}, "pkg/cache: unreachable package\n"+
+			"pkg/crypto: unreachable package\n"+
+			"pkg/http/http.go:17:6: unreachable func: Put\n"+
+			"pkg/http/http.go:9:6: unreachable func: Get\n"+
+			"pkg/logging/logging.go:12:6: unreachable func: Warn\n",
 		),
 		Entry("Tags", func(r *analysis.Runner) {
 			r.TagsFlag = "rpi"
-		}, "analysis/testdata/allinone/pkg/http/http.go:17:6: unreachable func: Put\n"+
-			"analysis/testdata/allinone/pkg/logging/logging.go:12:6: unreachable func: Warn\n"+
-			"analysis/testdata/allinone/pkg/logging/logging.go:6:6: unreachable func: Debug\n"),
+		}, "pkg/cache: unreachable package\n"+
+			"pkg/crypto: unreachable package\n"+
+			"pkg/http/http.go:17:6: unreachable func: Put\n"+
+			"pkg/logging/logging.go:12:6: unreachable func: Warn\n"+
+			"pkg/logging/logging.go:6:6: unreachable func: Debug\n"),
+		Entry("No dead pkg", func(r *analysis.Runner) {
+			r.NoDeadPkgFlag = true
+		}, "pkg/http/http.go:13:6: unreachable func: Post\n"+
+			"pkg/http/http.go:17:6: unreachable func: Put\n"+
+			"pkg/http/http.go:9:6: unreachable func: Get\n"+
+			"pkg/logging/logging.go:12:6: unreachable func: Warn\n"+
+			"pkg/logging/logging.go:6:6: unreachable func: Debug\n"+
+			"services/authn/internal/auth.go:18:6: unreachable func: RunFromTest\n"),
 	)
 
 	It("Handles properly multiple modules with filter", func() {
@@ -171,7 +186,7 @@ var _ = Describe("Runner", func() {
 			"testdata/allinone/services/config/main.go",
 			"testdata/cli/main.go",
 		})
-		r.FilterFlag = "Masterminds/semver"
+		r.FilterFlag = "Masterminds/semver|allinone"
 		Expect(r.Run(ctx)).To(Succeed())
 
 		lines := strings.Split(strings.TrimSpace(stdOut.String()), "\n")
@@ -182,7 +197,11 @@ var _ = Describe("Runner", func() {
 			} else if strings.Contains(line, "MustParse") {
 				foundMustParse = line
 			}
-			Expect(line).To(ContainSubstring("github.com/!masterminds/semver/v3@"))
+			Expect(line).To(SatisfyAny(
+				ContainSubstring("github.com/!masterminds/semver/v3@"),
+				ContainSubstring("deadmono/analysis/testdata/allinone/pkg/cache/"),
+				ContainSubstring("deadmono/analysis/testdata/allinone/pkg/logging/"),
+			))
 		}
 		Expect(foundStrictNewVersion).To(BeEmpty(), "StrictNewVersion should not be found")
 		Expect(foundMustParse).To(BeEmpty(), "MustParse should not be found")
@@ -202,12 +221,12 @@ var _ = Describe("Runner", func() {
 		expected := []*analysis.Package{
 			{
 				Name: "cache",
-				Path: "github.com/arxeiss/deadmono/analysis/testdata/allinone/pkg/cache",
+				Path: "github.com/arxeiss/deadmono/sample/allinone/pkg/cache",
 				Funcs: []*analysis.Function{
 					{
 						Name: "Delete",
 						Position: analysis.Position{
-							File: "analysis/testdata/allinone/pkg/cache/cache.go",
+							File: "pkg/cache/cache.go",
 							Line: 12,
 							Col:  6,
 						},
@@ -215,13 +234,19 @@ var _ = Describe("Runner", func() {
 				},
 			},
 			{
+				Name:         "crypto",
+				Path:         "github.com/arxeiss/deadmono/sample/allinone/pkg/crypto",
+				WholePackage: true,
+				Funcs:        make([]*analysis.Function, 0),
+			},
+			{
 				Name: "logging",
-				Path: "github.com/arxeiss/deadmono/analysis/testdata/allinone/pkg/logging",
+				Path: "github.com/arxeiss/deadmono/sample/allinone/pkg/logging",
 				Funcs: []*analysis.Function{
 					{
 						Name: "Debug",
 						Position: analysis.Position{
-							File: "analysis/testdata/allinone/pkg/logging/logging.go",
+							File: "pkg/logging/logging.go",
 							Line: 6,
 							Col:  6,
 						},
@@ -229,7 +254,7 @@ var _ = Describe("Runner", func() {
 					{
 						Name: "Warn",
 						Position: analysis.Position{
-							File: "analysis/testdata/allinone/pkg/logging/logging.go",
+							File: "pkg/logging/logging.go",
 							Line: 12,
 							Col:  6,
 						},
@@ -238,12 +263,12 @@ var _ = Describe("Runner", func() {
 			},
 			{
 				Name: "internal",
-				Path: "github.com/arxeiss/deadmono/analysis/testdata/allinone/services/authn/internal",
+				Path: "github.com/arxeiss/deadmono/sample/allinone/services/authn/internal",
 				Funcs: []*analysis.Function{
 					{
 						Name: "RunFromTest",
 						Position: analysis.Position{
-							File: "analysis/testdata/allinone/services/authn/internal/auth.go",
+							File: "services/authn/internal/auth.go",
 							Line: 18,
 							Col:  6,
 						},
@@ -251,7 +276,7 @@ var _ = Describe("Runner", func() {
 					{
 						Name: "Generated",
 						Position: analysis.Position{
-							File: "analysis/testdata/allinone/services/authn/internal/generated.go",
+							File: "services/authn/internal/generated.go",
 							Line: 5,
 							Col:  6,
 						},

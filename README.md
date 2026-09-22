@@ -47,20 +47,87 @@ This will report functions that are unused by all three services.
 - `-tags string` - Comma-separated list of build tags (passed to deadcode)
 - `-filter string` - Filter packages by regular expression (passed to deadcode). Default: `<module>` (filters to the module of the first entrypoint)
 - `-json` - Output results in JSON format (same format as deadcode)
+- `-no-dead-pkg` - Don't report unreachable packages, keeps the output compatible with deadcode
 - `-debug` - Enable verbose debug output
 - `-help` - Show help message
 
 ### Output
 
-The output format matches `deadcode`, with one difference: file path handling. Since `deadmono` analyzes multiple entrypoints, it uses a consistent path strategy:
+The output format matches `deadcode`, with two differences:
+
+**File paths.** Since `deadmono` analyzes multiple entrypoints, it uses a consistent path strategy:
 
 - **Single module** - Paths relative to `go.mod` when all entrypoints are in the same module
 - **Multiple modules** - Absolute paths when entrypoints span different modules
 
+**Unreachable packages.** `deadmono` also reports whole packages that no entrypoint imports. This has no
+counterpart in `deadcode`, see [Dead package detection](#dead-package-detection) below.
+
+## Dead package detection
+
+`deadmono` runs `deadcode` once per entrypoint, from that entrypoint's own directory. A package which no
+entrypoint imports therefore never appears in any of those runs, so the package based intersection has nothing
+to intersect and would silently skip it - even though such a package is completely dead.
+
+To close that gap, `deadmono` lists all packages of the module and reports those which are not imported by any
+of the analyzed entrypoints. Instead of listing every function separately, the package is reported as a whole:
+
+```
+pkg/crypto: unreachable package
+```
+
+In JSON output, such a package record has the extra `WholePackage` field set and an empty list of functions:
+
+```json
+{
+  "Name": "crypto",
+  "Path": "github.com/myorg/monorepo/pkg/crypto",
+  "WholePackage": true,
+  "Funcs": []
+}
+```
+
+`main` packages are never reported this way, as they are entrypoints and are not expected to be imported.
+
+A single `deadcode ./...` run over the whole module does see such packages, but it reports them function by
+function and cannot do the per service intersection `deadmono` is built for.
+
+### When it is enabled
+
+Dead package detection is **enabled by default**, but only when all entrypoints belong to the same Go module.
+When entrypoints span [multiple Go modules](#multiple-go-modules), there is no single module to enumerate the
+packages from, so the detection is skipped automatically.
+
+### Compatibility with `deadcode`
+
+> [!IMPORTANT]
+> With dead package detection turned on - which is the default - the output is **not compatible** with
+> `deadcode`. Text output contains `<package>: unreachable package` lines instead of the usual
+> `file:line:col: unreachable func: <name>` lines for each function of that package, and JSON output contains
+> package records with the extra `WholePackage` field and an empty `Funcs` list.
+
+If you feed the output into tooling which expects the `deadcode` format, use the `-no-dead-pkg` flag to
+suppress unreachable packages and keep the output fully compatible.
 
 ## Requirements
 
 - The [`deadcode`](https://pkg.go.dev/golang.org/x/tools/cmd/deadcode) tool must be installed
+
+### Outdated `deadcode` tool
+
+If you see an error like this:
+
+```
+This application uses version go1.26 of the source-processing packages but runs version go1.27 of 'go list'.
+It may fail to process source files that rely on newer language features. If so, rebuild the application using a newer version of Go.
+```
+
+it is not an issue of `deadmono`, but of an outdated `deadcode` binary built with an older Go version.
+Reinstall it with your current Go toolchain:
+
+```bash
+go install golang.org/x/tools/cmd/deadcode@latest
+```
 
 ## Multiple Go Modules
 
@@ -117,6 +184,8 @@ Simple intersection (dead in ALL services):
 2. **Analyzes each entrypoint separately** - Runs deadcode on each service
 3. **Intersects results per package** - Only considers services that actually import each package
 4. **Reports truly dead functions** - Functions unreachable from ALL services that import their package
+5. **Reports truly dead packages** - Packages which are not imported by any service at all, see
+   [Dead package detection](#dead-package-detection)
 
 ### How It Works on the Example Above
 

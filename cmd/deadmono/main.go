@@ -29,6 +29,8 @@ var (
 
 	generatedFlag = flag.Bool("generated", false, "include dead functions in generated Go files (deadcode flag)")
 	jsonFlag      = flag.Bool("json", false, "output JSON records (deadcode flag)")
+	noDeadPkgFlag = flag.Bool("no-dead-pkg", false,
+		"don't report unreachable packages, output compatible with deadcode")
 )
 
 func main() {
@@ -46,6 +48,7 @@ func main() {
 	runner.TestFlag = *testFlag
 	runner.TagsFlag = *tagsFlag
 	runner.JSONFlag = *jsonFlag
+	runner.NoDeadPkgFlag = *noDeadPkgFlag
 	runner.FilterFlag = *filterFlag
 
 	err := runner.Run(ctx)

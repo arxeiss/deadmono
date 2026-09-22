@@ -1,4 +1,4 @@
-module github.com/arxeiss/deadmono/testdata
+module github.com/arxeiss/deadmono/sample/cli
 
 go 1.25.2
 

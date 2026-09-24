@@ -27,7 +27,7 @@ go install golang.org/x/tools/cmd/deadcode@latest
 ## Usage
 
 ```bash
-deadmono [flags] path/to/main1.go path/to/main2.go ...
+deadmono [flags] [path/to/main.go | path/to/dir | path/to/dir/...] ...
 ```
 
 ### Example
@@ -39,6 +39,16 @@ deadmono services/authn/main.go services/config/main.go services/healthcheck/mai
 ```
 
 This will report functions that are unused by all three services.
+
+Instead of listing main files manually, you can pass a directory (optionally with `/...` suffix).
+It is scanned recursively for Go files declaring `func main`, skipping `testdata`, `vendor` and
+directories starting with `.` or `_`. Without any argument, the current directory is scanned:
+
+```bash
+deadmono services/...
+deadmono services
+deadmono
+```
 
 ### Flags
 

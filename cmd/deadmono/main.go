@@ -35,7 +35,7 @@ var (
 
 func main() {
 	flag.Parse()
-	if len(flag.Args()) == 0 || *helpFlag {
+	if *helpFlag {
 		usage()
 		os.Exit(2)
 	}

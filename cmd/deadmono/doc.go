@@ -1,7 +1,7 @@
 /*
 The deadmono command reports unreachable functions across multiple entrypoints in Go monorepos.
 
-	Usage: deadmono [flags] path/to/main1.go path/to/main2.go ...
+	Usage: deadmono [flags] [path/to/main.go | path/to/dir | path/to/dir/...] ...
 
 The deadmono command extends the functionality of the deadcode tool
 (https://pkg.go.dev/golang.org/x/tools/cmd/deadcode) to work with monorepos
@@ -28,6 +28,13 @@ Analyze three services in a monorepo:
 	$ deadmono services/authn/main.go services/config/main.go services/healthcheck/main.go
 
 This will report functions that are unused by all three services.
+
+Instead of listing main files manually, you can pass a directory (optionally with "/..." suffix).
+It is scanned recursively for Go files declaring func main, skipping "testdata", "vendor" and
+directories starting with "." or "_". Without any argument, the current directory is scanned:
+
+	$ deadmono services/...
+	$ deadmono
 
 # Flags
 

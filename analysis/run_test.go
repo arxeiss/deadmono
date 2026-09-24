@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"slices"
@@ -28,16 +29,37 @@ var _ = Describe("Runner", func() {
 		stdErr = bytes.NewBuffer(nil)
 	})
 
-	It("fails on no paths", func() {
+	It("fails on no main files in current directory", func() {
 		ctx := context.Background()
+		// Current directory contains only testdata with main files, which must be skipped.
 		r := analysis.New(stdOut, stdErr, []string{})
 		err := r.Run(ctx)
-		Expect(err).To(MatchError("no paths provided"))
+		Expect(err).To(MatchError("no main files found in '.'"))
 	})
+
+	DescribeTable("fails on invalid paths",
+		func(path, expectedErr string) {
+			ctx := context.Background()
+			r := analysis.New(stdOut, stdErr, []string{path})
+			err := r.Run(ctx)
+			Expect(err).To(MatchError(HavePrefix(expectedErr)))
+		},
+		Entry("Non existing file", "testdata/nonexisting/main.go",
+			"failed to access 'testdata/nonexisting/main.go': "),
+		Entry("Non existing directory", "testdata/nonexisting/...",
+			"failed to access 'testdata/nonexisting/...': "),
+		Entry("File with recursive suffix", "testdata/cli/main.go/...",
+			"'testdata/cli/main.go' is not a directory"),
+		Entry("Directory without main files", "testdata/allinone/pkg",
+			"no main files found in 'testdata/allinone/pkg'"),
+	)
 
 	It("fails on no Go module", func() {
 		ctx := context.Background()
-		r := analysis.New(stdOut, stdErr, []string{"/home"})
+		dir := GinkgoT().TempDir()
+		Expect(os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main\n\nfunc main() {}\n"), 0o600)).
+			To(Succeed())
+		r := analysis.New(stdOut, stdErr, []string{dir})
 		err := r.Run(ctx)
 		Expect(err).To(MatchError(ContainSubstring(
 			"failed to list dependencies: go: go.mod file not found in current directory or any parent directory",
@@ -89,6 +111,14 @@ var _ = Describe("Runner", func() {
 			Expect(r.Run(ctx)).To(Succeed())
 			Expect(stdOut.String()).To(Equal(expectedOutput))
 		},
+		Entry("Directory", []string{"testdata/allinone"}),
+		Entry("Directory with trailing slash", []string{"testdata/allinone/"}),
+		Entry("Recursive directory", []string{"testdata/allinone/..."}),
+		Entry("Multiple directories", []string{
+			"testdata/allinone/services/authn",
+			"testdata/allinone/services/config/...",
+			"testdata/allinone/services/healthcheck/main.go",
+		}),
 		Entry("Alphabetical", []string{
 			"testdata/allinone/services/authn/main.go",
 			"testdata/allinone/services/config/main.go",
@@ -105,6 +135,27 @@ var _ = Describe("Runner", func() {
 			"testdata/allinone/services/config/main.go",
 		}),
 	)
+
+	It("Verify scanning current directory without paths", func() {
+		ctx := context.Background()
+		wd, err := os.Getwd()
+		Expect(err).To(Succeed())
+		Expect(os.Chdir("testdata/allinone")).To(Succeed())
+		DeferCleanup(os.Chdir, wd)
+
+		r := analysis.New(stdOut, stdErr, nil)
+		r.DebugFlag = true
+		Expect(r.Run(ctx)).To(Succeed())
+		Expect(stdErr.String()).To(HavePrefix("No paths provided, scanning current directory\n" +
+			"Found main file: services/authn/main.go\n" +
+			"Found main file: services/config/main.go\n" +
+			"Found main file: services/healthcheck/main.go\n"))
+		Expect(stdOut.String()).To(Equal("pkg/cache/cache.go:12:6: unreachable func: Delete\n" +
+			"pkg/crypto: unreachable package\n" +
+			"pkg/logging/logging.go:12:6: unreachable func: Warn\n" +
+			"pkg/logging/logging.go:6:6: unreachable func: Debug\n" +
+			"services/authn/internal/auth.go:18:6: unreachable func: RunFromTest\n"))
+	})
 
 	It("Verify debug output", func() {
 		ctx := context.Background()

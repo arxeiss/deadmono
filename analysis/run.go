@@ -55,6 +55,8 @@ type (
 
 // New creates runner for analysis.
 // Pass paths to all Go main files within monorepo. If you pass only 1 path, it will behave like normal deadcode.
+// Paths can be also directories (optionally with "/..." suffix), which are recursively scanned for main files.
+// If no path is passed, current directory is scanned.
 func New(writer, errWriter io.Writer, paths []string) *Runner {
 	return &Runner{
 		writer:    writer,
@@ -75,10 +77,12 @@ func (r *Runner) writeDebug(format string, args ...any) {
 
 // Run the deadcode analysis across monorepo and prints out unused exported functions.
 func (r *Runner) Run(ctx context.Context) error {
-	if len(r.paths) == 0 {
-		return fmt.Errorf("no paths provided")
-	}
 	err := r.verifyBinaries(ctx)
+	if err != nil {
+		return err
+	}
+
+	r.paths, err = r.resolvePaths()
 	if err != nil {
 		return err
 	}

@@ -3,8 +3,8 @@ module github.com/arxeiss/deadmono
 go 1.27.0
 
 require (
-	github.com/onsi/ginkgo/v2 v2.33.0
-	github.com/onsi/gomega v1.43.1
+	github.com/onsi/ginkgo/v2 v2.33.1
+	github.com/onsi/gomega v1.44.0
 )
 
 require (
